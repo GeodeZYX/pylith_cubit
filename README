@@ -1,0 +1,41 @@
+﻿Les présents scripts & fonction permettent de générer une grille compatible Pylith via Trelis (aka Cubit)
+
+Ils sont directement interprétables par la console python de Trelis
+(On rappelle que cette console n'est pas visible par défaut =>l'afficher via Options / Layout / Show Script Tab)
+
+# PARTIE 1 : GEOMÉTRIE PRELIMINAIRE (prior design)
+
+On fournit un fichier de bathymétrie et un fichier décrivant le Slab
+(Y positifs vers le haut, pour tracé graphique plus aisé)
+VEILLER A CE QUE LES 2 FICHIERS AIENT UN POINT COMMUN (le point le plus bas de la fosse)
+
+Le script se charge de passer d'une nomenclature Bathy/Slab à une nomenclature Overriding Plate / Downgowing Plate, d'étendre la géométrie et de générer un prisme d'accrétion
+
+Les sorties de la partie 1 sont des Listes X & Y (séparées) pour les différentes courbes, et un dictionnaire contenant les points isolés
+
+# PARTIE 2 : MAILLAGE CUBIT
+
+les fonctions :
+- sans suffixe prennent en argument des objets Cubit (GeomEntity)
+- avec le suffixe _desc prennent en argument un DESCRIPTEUR i.e. l'ID de l'objet (un int)
+ou son nom (un string)
+On privilégie les fonctions *_desc
+#Penser a faire un Warning si les contours ne sont pas fermes
+
+A noter les petites subtilités suivantes du fait que l'API Python de Trelis reste assez cryptique :
+- Il faut creer les Vertex avec des commandes APREPRO parce que l'API Python ne gere pas les unites (*km)
+- les fonctions destroy_curve & rename_curve[_desc] sont des fonctions ad hoc qui remplacent les methodes ne marchent pas ...
+- Le fonctions données à l'interpreteur Trelis ne doivent PAS CONTENIR DE SAUT DE LIGNES !!! (ou alors commentés)
+
+NOTES SUR LA NOMENCLATURE D'UN FICHER EXODUSII
+
+Se referer au Schéma page 7 de la doc de ref de Sandia.
+Les noeuds ont un ID CUBIT (id) + un indice 'local' dans le fichier exodus (n)
+le node_num_map associe à un indice local n l'ID Cubit
+on a node_num_map[n] = id
+de même pour acceder aux coordonnées on fait:
+coordx[n] = x
+bien sur, en convention Python avec indices commencant à 0, on a n => n-1
+donc m = n-1 et coordx[m] = x
+
+
