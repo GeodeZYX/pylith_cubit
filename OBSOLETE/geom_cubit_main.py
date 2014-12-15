@@ -1,0 +1,185 @@
+import geom_cubit_lib as gcl 
+import cubit
+import numpy as np
+import ConfigParser
+import os
+import sys
+
+reload(gcl)
+
+def geom_cubit_main(configfile):
+    if not os.path.isfile(configfile) :
+        raise Exception("ERR: CONFIG FILE DON'T EXIST !!!")
+    #  READ CONFIGFILE
+    cf = ConfigParser.ConfigParser()
+    cf.read(configfile)
+    experience_name = cf.get('Input','experience_name')
+    bathyfile = cf.get('Input','bathyfile')
+    slabfile = cf.get('Input','slabfile')
+    left_extension=cf.getfloat('Parameters','left_extension') # (always positive)
+    right_extension=cf.getfloat('Parameters','right_extension')
+    down_limit=cf.getfloat('Parameters','down_limit') # (always positive)
+    EET_OP=cf.getfloat('Parameters','EET_OP') #  Thickness of the OP Litho
+    EET_DP=cf.getfloat('Parameters','EET_DP') #  Thickness of the DP Litho
+    backstop_bool=cf.getboolean('Parameters','backstop_bool') # True or False
+    x_backstop=cf.getfloat('Parameters','x_backstop')
+    dip_backstop=cf.getfloat('Parameters','dip_backstop')
+    output_path=cf.get('Output','output_path')
+    output_file_prefix=cf.get('Output','output_file_prefix')
+    output_pathfile = output_path + '/'  + output_file_prefix + '_'  + experience_name + '.exo'
+    # =======================================================================
+    #  PRIOR DESIGN
+    # =======================================================================
+    # Loading the BATHY and SLAB files
+    XYbathy = np.loadtxt(bathyfile)
+    XYslab = np.loadtxt(slabfile)
+    # Creating the bottom of the slab
+    XslabBot,YslabBot,_ = gcl.shift_thickness(XYslab[:,0],XYslab[:,1],EET_DP)
+    # Creating the bounding points in a dictionnary
+    outpts = gcl.make_bounding_points(XYbathy[:,0],XYbathy[:,1],XYslab[:,0],XYslab[:,1],EET_OP,EET_DP,down_limit,left_extension,right_extension)
+    # Creating the backstop
+    Xbackstop,Ybackstop = gcl.make_backstop(XYbathy[:,0],XYbathy[:,1],XYslab[:,0],XYslab[:,1],x_backstop,dip_backstop,dupdown=150)
+    # Adding the 'Bottom_Litho_DP' point to the Litho_DP Bottom
+    gcl.add_point_in_list(XslabBot,YslabBot,outpts['vBottom_Litho_DP'])
+    # Changing the description concept : Bathy & Slab ==> OP & DP
+    Xop,Yop,Xdp,Ydp = gcl.bathyslab_2_OPDPtop(XYbathy[:,0],XYbathy[:,1],XYslab[:,0],XYslab[:,1])
+    # Adding the limit points of OP & DP
+    Xop,Yop = gcl.add_point_in_list(Xop,Yop,outpts['vBathy_OP'])
+    Xdp,Ydp = gcl.add_point_in_list(Xdp,Ydp,outpts['vBathy_DP'])
+    # PLOT FOR SECURITY
+    #plt.clf()
+    #plt.axis('equal')
+    #plt.plot(XYbathy[:,0],XYbathy[:,1],'+b')
+    #plt.plot(XYslab[:,0],XYslab[:,1],'r+-')
+    #plt.plot(XslabBot,YslabBot,'k+-')
+    #plt.plot(Xbackstop,Ybackstop,'*-y')
+    #for p in outpts.viewvalues():
+    #    plt.plot(p[0],p[1],'*k')
+    #plt.plot(Xop,Yop,'b-')
+    #plt.plot(Xdp,Ydp,'r-')
+    # =======================================================================
+    #  CUBIT MESHING
+    # =======================================================================
+    # Initalisation
+    cubit.cmd('reset')  
+    cubit.cmd("#{Units('si')}")  
+    # Chargement des courbes
+    gcl.list_2_curve(Xop,Yop,'Top_Litho_OP')
+    gcl.list_2_curve(Xdp,Ydp,'Top_Litho_limit_DP')
+    gcl.list_2_curve(XslabBot,YslabBot,'Bottom_Litho_DP')
+    gcl.list_2_curve(Xbackstop,Ybackstop,'Backstop')
+    # Chargement des Points Isolés
+    gcl.dico_2_listofvertices(outpts)
+    ## fabrication de "courbes-segments" a partir de vertex
+    v_Bottom_Litho_OP = cubit.vertex(cubit.get_id_from_name('vBottom_Litho_OP'))
+    v_Bathy_DP = gcl.find_extrema(cubit.curve(cubit.get_id_from_name("Top_Litho_limit_DP")),'r')
+    v_Bathy_OP = gcl.find_extrema(cubit.curve(cubit.get_id_from_name('Top_Litho_OP')),'l')
+    v_Bottom_Litho_DP = gcl.find_extrema(cubit.curve(cubit.get_id_from_name("Bottom_Litho_DP")),'r')
+    v_scratch = cubit.vertex(cubit.get_id_from_name('vscratch'))
+    v_Bottom_Astheno_OP = cubit.vertex(cubit.get_id_from_name('vBottom_Astheno_OP'))
+    v_Bottom_Astheno_DP = cubit.vertex(cubit.get_id_from_name('vBottom_Astheno_DP'))
+    # 
+    gcl.vertices_2_curve(v_Bottom_Litho_OP,v_Bottom_Astheno_OP,'Edge_Astheno_OP')
+    gcl.vertices_2_curve(v_Bottom_Litho_OP,v_scratch,'Bottom_Litho_OP_PROTO')
+    gcl.vertices_2_curve(v_Bottom_Litho_OP,v_Bathy_OP,'Edge_Litho_OP')
+    gcl.vertices_2_curve(v_Bottom_Astheno_OP,v_Bottom_Astheno_DP,'Bottom_PROTO')
+    gcl.vertices_2_curve(v_Bathy_DP,v_Bottom_Litho_DP,'Edge_Litho_DP')
+    gcl.vertices_2_curve(v_Bottom_Litho_DP,v_Bottom_Astheno_DP,'Edge_Astheno_DP') 
+    ## Split des courbes
+    gcl.double_split_desc(2,6)
+    gcl.double_split_desc(8,11)
+    gcl.double_split_desc(16,3)
+    gcl.double_split_desc(4,12)
+    gcl.double_split_desc(1,23)
+    gcl.double_split_desc(26,28)
+    ## suppression des petits morceaux
+    gcl.destroy_curve(cubit.curve(14))
+    gcl.destroy_curve(cubit.curve(24))
+    gcl.destroy_curve(cubit.curve(17))
+    gcl.destroy_curve(cubit.curve(21))
+    gcl.destroy_curve(cubit.curve(29))
+    ## renommage des courbes
+    gcl.rename_curve_desc(7,'Edge_Litho_OP')
+    gcl.rename_curve_desc(5,'Edge_Astheno_OP')
+    gcl.rename_curve_desc(9,'Edge_Litho_DP')
+    gcl.rename_curve_desc(10,'Edge_Astheno_DP')
+    gcl.rename_curve_desc(25,'Contact_OP_DP')
+    gcl.rename_curve_desc(31,'Contact_Prism_DP')
+    gcl.rename_curve_desc(30,'Contact_Prism_OP')
+    gcl.rename_curve_desc(32,'Top_Litho_DP')
+    gcl.rename_curve_desc(33,'Top_Prism')
+    gcl.rename_curve_desc(27,'Top_Litho_OP')
+    gcl.rename_curve_desc(20,'Bottom_Astheno_DP')
+    gcl.rename_curve_desc(22,'Bottom_Litho_DP')
+    gcl.rename_curve_desc(15,'Bottom_Astheno_OP')
+    gcl.rename_curve_desc(13,'Bottom_Litho_OP')
+    gcl.rename_curve_desc(19,'Front_Litho_DP')
+    gcl.rename_curve_desc(18,'Astheno_Litho_Contact')
+    # creation des surfaces
+    gcl.create_surface_desc([10,20,22])
+    gcl.create_surface_desc([19,18,25,31,32,9,22])
+    gcl.create_surface_desc([13,18,15,5])
+    gcl.create_surface_desc([13,7,27,30,25])
+    gcl.create_surface_desc([30,31,33])
+    # renomage des surfaces
+    cubit.surface(1).entity_name('Astheno_DP')
+    cubit.surface(2).entity_name('Litho_DP')
+    cubit.surface(3).entity_name('Astheno_OP')
+    cubit.surface(4).entity_name('Litho_OP')
+    cubit.surface(5).entity_name('Prisme')
+    # Fusion des surfaces
+    cubit.cmd('delete vertex all')
+    cubit.cmd('imprint all')
+    cubit.cmd('merge all')
+    cubit.cmd('stitch volume all')
+    cubit.cmd('surface all scheme trimesh')
+    cubit.cmd('curve all scheme default')
+    cubit.cmd('surface all sizing function none')
+    # nouveau decoupage des courbes
+    dx1 = 4.0
+    dx2 = 25.0
+    dx3 = 8
+    b1=1.1
+    gcl.curver_desc("Contact_Prism_DP",dx1)
+    gcl.curver_desc("Contact_Prism_OP",dx1)
+    gcl.curver_desc("Top_Prism",dx1)
+    gcl.curver_desc("Bottom_Litho_DP",dx2)
+    gcl.curver_desc("Bottom_Astheno_OP",dx2)
+    gcl.curver_desc("Front_Litho_DP",dx2)
+    gcl.curver_desc("Bottom_Astheno_DP",dx2)
+    gcl.curver_desc("Edge_Astheno_OP",dx2)
+    gcl.curver_desc("Edge_Litho_OP",dx2)
+    gcl.curver_desc("Edge_Astheno_DP",dx2)
+    gcl.curver_desc("Edge_Litho_DP",dx2)
+    gcl.curver_desc("Contact_OP_DP",dx1)
+    gcl.curver_start_end_desc("Bottom_Litho_OP",dx1,dx2,'l')
+    gcl.curver_start_end_desc("Top_Litho_OP",dx1,dx2,'l')
+    gcl.curver_start_end_desc("Top_Litho_DP",dx1,dx2,'r')
+    gcl.curver_start_end_desc("Astheno_Litho_Contact",dx1,dx2,'l')  
+    # fabrication du mesh
+    cubit.cmd('mesh surface all')
+    cubit.cmd('surface all smooth scheme condition number beta 1.7 cpu 10')
+    cubit.cmd('smooth surface all')
+    cubit.cmd('surface 1 size auto factor 5')
+    ## Fabrication de groupe et de nodeset
+    for i,s in enumerate(cubit.get_entities("surface")):
+        S = cubit.surface(s)
+        cubit.cmd('block ' + str(i+1) + ' surface ' + S.entity_name())
+        cubit.cmd('block ' + str(i+1) + ' name "' + S.entity_name() + ' "' )
+    gcl.create_group_nodeset_desc(['Astheno_Litho_Contact','Contact_OP_DP','Contact_Prism_DP'],"fault_top",20)     
+    gcl.create_group_nodeset_desc(['Top_Litho_OP','Top_Prism','Top_Litho_DP'],"ground_surface",20)     
+    gcl.create_group_nodeset_desc(['Bottom_Litho_OP'],"bottom_litho_OP",20)     
+    gcl.create_group_nodeset_desc(['Bottom_Litho_DP'],"bottom_litho_DP",20)     
+    gcl.create_group_nodeset_desc(['Bottom_Astheno_DP','Bottom_Astheno_OP'],"bottom_astheno",20) 
+    gcl.create_group_nodeset_desc(['Edge_Litho_OP'],"edge_litho_OP",20) 
+    gcl.create_group_nodeset_desc(['Edge_Litho_DP'],"edge_litho_DP",20) 
+    gcl.create_group_nodeset_desc(['Edge_Astheno_OP'],"edge_astheno_OP",20) 
+    gcl.create_group_nodeset_desc(['Edge_Astheno_DP'],"edge_astheno_DP",20) 
+    gcl.create_group_nodeset_desc(['Front_Litho_DP'],"front_litho_DP",20) 
+    gcl.create_group_nodeset_desc(['Contact_Prism_OP'],"contact_prism_OP",20)
+    # ecriture fichier final
+    cubit.cmd('export mesh "' + output_pathfile + '" dimension 2 overwrite')
+    return None
+
+geom_cubit_main('/home/psakicki/THESE/MODEL_GWADA/WORKING_DIR/configfile_3a.cf')
+
