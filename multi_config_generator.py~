@@ -1,0 +1,54 @@
+import ConfigParser
+import numpy as np
+import itertools
+import sysconfig
+import sys
+
+cf = ConfigParser.ConfigParser()
+if sys.args[0] != ''
+    cf.read(sys.args[0])
+else:
+    cf.read(sys.args[0])
+	
+
+dic = {}
+cleans = cf.sections()
+cleans.remove('Input')
+cleans.remove('Output')
+
+for s in cleans:
+    if not cf.getboolean(s,'variable'):
+        val = [cf.getfloat(s,'fixed')]
+    else:
+        val = list(np.arange(cf.getfloat(s,'min'),cf.getfloat(s,'max')+0.1, cf.getfloat(s,'delta')))
+    dic[s] = val
+ 
+pstr = 'Parameters'
+ostr = 'Output'
+istr = 'Input'
+                    
+for i,V in enumerate(list(itertools.product(*dic.values()))):
+    outcf = ConfigParser.SafeConfigParser() 
+    outcf.add_section('Input')
+    outcf.add_section('Output')
+    outcf.add_section('Parameters')
+    
+    outcf.set(istr,'bathyfile',cf.get(istr,'bathyfile'))
+    outcf.set(istr,'slabfile',cf.get(istr,'slabfile'))
+    
+    outcf.set(ostr,'output_path',cf.get(ostr,'output_path_meshs'))
+    outcf.set(ostr,'output_prefix',cf.get(ostr,'output_prefix'))
+    
+    for j,v in enumerate(list(V)):
+        outcf.set(pstr,dic.keys()[j],str(v))
+        outcf.set(ostr,'output_suffix',str(i))
+
+        outfile = open(cf.get(ostr,'output_path_configfiles')  + '/' + cf.get(ostr,'output_prefix') + str(i) + '.cf','w')
+        outcf.write(outfile)
+        outfile.close()
+        
+                        
+                        
+                    
+
+    
