@@ -372,11 +372,20 @@ def curver_start_end_desc(Cdesc,dx1,dx2,direction='l'):
         curver_start_end(cubit.curve(cubit.get_id_from_name(Cdesc)),dx1,dx2,direction)
     return None    
 
-def create_group_nodeset_desc(Clist,grpname,nodesetID=0):
+def create_group_nodeset_desc(Clist,grpname,nodesetID=0,grpname_remove=[]):
     while nodesetID == 0 or (nodesetID in cubit.get_nodeset_id_list()):
         nodesetID = nodesetID +1
     for c in Clist:
         cubit.silent_cmd('group "' + grpname + '" add node in ' + c) 
+    #Remove some vertice in nodes if specified
+    print grpname_remove
+    if len(grpname_remove)!=0:
+        # Check if group already specified
+        for grp in grpname_remove:
+            id_grp=cubit.get_id_from_name(grp)
+            if id_grp!=0:
+                cubit.silent_cmd('group "' + grpname + '" remove node in group ' + grp) 
+    # Name the nodesets
     cubit.silent_cmd('nodeset ' + str(nodesetID) + ' group ' + grpname)
     cubit.silent_cmd('nodeset ' + str(nodesetID) + ' name "' + grpname + '"' )
 
@@ -508,88 +517,91 @@ def geom_cubit_main(configfile):
     gcl.double_split_desc("Backstop","Top_Litho_limit_DP_2")
     gcl.double_split_desc("Top_Litho_OP","Backstop_1")
     gcl.double_split_desc("Top_Litho_limit_DP_2_2","Top_Litho_OP_2")
+    if True:
     #    ## suppression des petits morceaux
-    gcl.destroy_curve_desc("Top_Litho_limit_DP_1_1")
-    gcl.destroy_curve_desc("Bottom_Litho_DP_1")
-    gcl.destroy_curve_desc("Backstop_2")
-    gcl.destroy_curve_desc("Bottom_Litho_OP_PROTO_2")
-    gcl.destroy_curve_desc("Backstop_1_1")
-#    ## renommage des courbes
-    gcl.rename_curve_desc(7,'Edge_Litho_OP')
-    gcl.rename_curve_desc(5,'Edge_Astheno_OP') 
-    gcl.rename_curve_desc(9,'Edge_Litho_DP')
-    gcl.rename_curve_desc(10,'Edge_Astheno_DP')    
-    gcl.rename_curve_desc("Top_Litho_limit_DP_2_1",'Contact_OP_DP')
-    gcl.rename_curve_desc("Top_Litho_limit_DP_2_2_1" ,'Contact_Prism_DP')
-    gcl.rename_curve_desc("Backstop_1_2",'Contact_Prism_OP')
-    gcl.rename_curve_desc("Top_Litho_OP_2_1",'Top_Litho_DP')
-    gcl.rename_curve_desc("Top_Litho_OP_2_2",'Top_Prism')
-    gcl.rename_curve_desc("Top_Litho_OP_1",'Top_Litho_OP')
-    gcl.rename_curve_desc("Bottom_PROTO_2_2",'Bottom_Astheno_DP')
-    gcl.rename_curve_desc("Bottom_Litho_DP_2",'Bottom_Litho_DP')
-    gcl.rename_curve_desc("Bottom_PROTO_1",'Bottom_Astheno_OP')
-    gcl.rename_curve_desc("Bottom_Litho_OP_PROTO_1" ,'Bottom_Litho_OP')
-    gcl.rename_curve_desc("Bottom_PROTO_2_1" ,'Front_Litho_DP')
-    gcl.rename_curve_desc("Top_Litho_limit_DP_1_2",'Astheno_Litho_Contact')
-#    # creation des surfaces
-    gcl.create_surface_desc(["Edge_Astheno_DP","Bottom_Astheno_DP","Bottom_Litho_DP"])
-    gcl.create_surface_desc(["Front_Litho_DP","Bottom_Litho_DP","Edge_Litho_DP","Top_Litho_DP","Contact_Prism_DP","Contact_OP_DP","Astheno_Litho_Contact"])
-    gcl.create_surface_desc(["Bottom_Astheno_OP", "Astheno_Litho_Contact", "Bottom_Litho_OP", "Edge_Astheno_OP"])
-    gcl.create_surface_desc(["Bottom_Litho_OP","Edge_Litho_OP","Top_Litho_OP","Contact_Prism_OP","Contact_OP_DP"])
-    gcl.create_surface_desc(["Top_Prism","Contact_Prism_DP","Contact_Prism_OP"])   
-    # renomage des surfaces
-    cubit.surface(1).entity_name('Astheno_DP')
-    cubit.surface(2).entity_name('Litho_DP')
-    cubit.surface(3).entity_name('Astheno_OP')
-    cubit.surface(4).entity_name('Litho_OP')
-    cubit.surface(5).entity_name('Prisme')
-    # Fusion des surfaces
-    cubit.cmd('delete vertex all')
-    cubit.cmd('imprint all')
-    cubit.cmd('merge all')
-    cubit.cmd('stitch volume all')
-    cubit.cmd('surface all scheme trimesh')
-    cubit.cmd('curve all scheme default')
-    cubit.cmd('surface all sizing function none')
-    gcl.rename_curve_desc(45,'Astheno_Litho_Contact')
-    # nouveau decoupage des courbes
-    gcl.curver_desc("Contact_Prism_DP",dx1)
-    gcl.curver_desc("Contact_Prism_OP",dx1)
-    gcl.curver_desc("Top_Prism",dx1)
-    gcl.curver_desc("Bottom_Litho_DP",dx2)
-    gcl.curver_desc("Bottom_Astheno_OP",dx2)
-    gcl.curver_desc("Front_Litho_DP",dx2)
-    gcl.curver_desc("Bottom_Astheno_DP",dx2)
-    gcl.curver_desc("Edge_Astheno_OP",dx2)
-    gcl.curver_desc("Edge_Litho_OP",dx2)
-    gcl.curver_desc("Edge_Astheno_DP",dx2)
-    gcl.curver_desc("Edge_Litho_DP",dx2)
-    gcl.curver_desc("Contact_OP_DP",dx1)
-    gcl.curver_start_end_desc("Bottom_Litho_OP",dx1,dx2,'l')
-    gcl.curver_start_end_desc("Top_Litho_OP",dx1,dx2,'l')
-    gcl.curver_start_end_desc("Top_Litho_DP",dx1,dx2,'r')
-    gcl.curver_start_end_desc("Astheno_Litho_Contact",dx1,dx2,'l')  
-    # fabrication du mesh
-    cubit.cmd('mesh surface all')
-    cubit.cmd('surface all smooth scheme condition number beta 1.7 cpu 10')
-    cubit.cmd('smooth surface all')
-#    cubit.cmd('surface 1 size auto factor 5')
-    # Fabrication de groupe et de nodeset
-    for i,s in enumerate(cubit.get_entities("surface")):
-        S = cubit.surface(s)
-        cubit.cmd('block ' + str(i+1) + ' surface ' + S.entity_name())
-        cubit.cmd('block ' + str(i+1) + ' name "' + S.entity_name() + ' "' )
-    gcl.create_group_nodeset_desc(['Astheno_Litho_Contact','Contact_OP_DP','Contact_Prism_DP'],"fault_top",20)     
-    gcl.create_group_nodeset_desc(['Top_Litho_OP','Top_Prism','Top_Litho_DP'],"ground_surface",20)     
-    gcl.create_group_nodeset_desc(['Bottom_Litho_OP'],"bottom_litho_OP",20)     
-    gcl.create_group_nodeset_desc(['Bottom_Litho_DP'],"bottom_litho_DP",20)     
-    gcl.create_group_nodeset_desc(['Bottom_Astheno_DP','Bottom_Astheno_OP'],"bottom_astheno",20) 
-    gcl.create_group_nodeset_desc(['Edge_Litho_OP'],"edge_litho_OP",20) 
-    gcl.create_group_nodeset_desc(['Edge_Litho_DP'],"edge_litho_DP",20) 
-    gcl.create_group_nodeset_desc(['Edge_Astheno_OP'],"edge_astheno_OP",20) 
-    gcl.create_group_nodeset_desc(['Edge_Astheno_DP'],"edge_astheno_DP",20) 
-    gcl.create_group_nodeset_desc(['Front_Litho_DP'],"front_litho_DP",20) 
-    gcl.create_group_nodeset_desc(['Contact_Prism_OP'],"contact_prism_OP",20)
-    # ecriture fichier final
-    cubit.cmd('export mesh "' + output_pathfile + '" dimension 2 overwrite')
+        gcl.destroy_curve_desc("Top_Litho_limit_DP_1_1")
+        gcl.destroy_curve_desc("Bottom_Litho_DP_1")
+        gcl.destroy_curve_desc("Backstop_2")
+        gcl.destroy_curve_desc("Bottom_Litho_OP_PROTO_2")
+        gcl.destroy_curve_desc("Backstop_1_1")
+    #    ## renommage des courbes
+        gcl.rename_curve_desc(7,'Edge_Litho_OP')
+        gcl.rename_curve_desc(5,'Edge_Astheno_OP') 
+        gcl.rename_curve_desc(9,'Edge_Litho_DP')
+        gcl.rename_curve_desc(10,'Edge_Astheno_DP')    
+        gcl.rename_curve_desc("Top_Litho_limit_DP_2_1",'Contact_OP_DP')
+        gcl.rename_curve_desc("Top_Litho_limit_DP_2_2_1" ,'Contact_Prism_DP')
+        gcl.rename_curve_desc("Backstop_1_2",'Contact_Prism_OP')
+        gcl.rename_curve_desc("Top_Litho_OP_2_1",'Top_Litho_DP')
+        gcl.rename_curve_desc("Top_Litho_OP_2_2",'Top_Prism')
+        gcl.rename_curve_desc("Top_Litho_OP_1",'Top_Litho_OP')
+        gcl.rename_curve_desc("Bottom_PROTO_2_2",'Bottom_Astheno_DP')
+        gcl.rename_curve_desc("Bottom_Litho_DP_2",'Bottom_Litho_DP')
+        gcl.rename_curve_desc("Bottom_PROTO_1",'Bottom_Astheno_OP')
+        gcl.rename_curve_desc("Bottom_Litho_OP_PROTO_1" ,'Bottom_Litho_OP')
+        gcl.rename_curve_desc("Bottom_PROTO_2_1" ,'Front_Litho_DP')
+        gcl.rename_curve_desc("Top_Litho_limit_DP_1_2",'Astheno_Litho_Contact')
+   #    # creation des surfaces
+        gcl.create_surface_desc(["Edge_Astheno_DP","Bottom_Astheno_DP","Bottom_Litho_DP"])
+        gcl.create_surface_desc(["Front_Litho_DP","Bottom_Litho_DP","Edge_Litho_DP","Top_Litho_DP","Contact_Prism_DP","Contact_OP_DP","Astheno_Litho_Contact"])
+        gcl.create_surface_desc(["Bottom_Astheno_OP", "Astheno_Litho_Contact", "Bottom_Litho_OP", "Edge_Astheno_OP"])
+        gcl.create_surface_desc(["Bottom_Litho_OP","Edge_Litho_OP","Top_Litho_OP","Contact_Prism_OP","Contact_OP_DP"])
+        gcl.create_surface_desc(["Top_Prism","Contact_Prism_DP","Contact_Prism_OP"])   
+    #    # renomage des surfaces
+        cubit.surface(1).entity_name('Astheno_DP')
+        cubit.surface(2).entity_name('Litho_DP')
+        cubit.surface(3).entity_name('Astheno_OP')
+        cubit.surface(4).entity_name('Litho_OP')
+        cubit.surface(5).entity_name('Prisme')
+       # Fusion des surfaces
+        cubit.cmd('delete vertex all')
+        cubit.cmd('imprint all')
+        cubit.cmd('merge all')
+        cubit.cmd('stitch volume all')
+        gcl.rename_curve_desc(45,'Astheno_Litho_Contact')
+        cubit.cmd('surface all scheme trimesh')
+        cubit.cmd('curve all scheme default')
+        cubit.cmd('surface all sizing function none')
+        # nouveau decoupage des courbes
+        gcl.curver_desc("Contact_Prism_DP",dx1)
+        gcl.curver_desc("Contact_Prism_OP",dx1)
+        gcl.curver_desc("Top_Prism",dx1)
+        gcl.curver_desc("Bottom_Litho_DP",dx2)
+        gcl.curver_desc("Bottom_Astheno_OP",dx2)
+        gcl.curver_desc("Front_Litho_DP",dx2)
+        gcl.curver_desc("Bottom_Astheno_DP",dx2)
+        gcl.curver_desc("Edge_Astheno_OP",dx2)
+        gcl.curver_desc("Edge_Litho_OP",dx2)
+        gcl.curver_desc("Edge_Astheno_DP",dx2)
+        gcl.curver_desc("Edge_Litho_DP",dx2)
+        gcl.curver_desc("Contact_OP_DP",dx1)
+        gcl.curver_start_end_desc("Bottom_Litho_OP",dx1,dx2,'l')
+        gcl.curver_start_end_desc("Top_Litho_OP",dx1,dx2,'l')
+        gcl.curver_start_end_desc("Top_Litho_DP",dx1,dx2,'r')
+        gcl.curver_start_end_desc("Astheno_Litho_Contact",dx1,dx2,'l')  
+        # fabrication du mesh
+        cubit.cmd('mesh surface all')
+        cubit.cmd('surface all smooth scheme condition number beta 1.7 cpu 10')
+        cubit.cmd('smooth surface all')
+        cubit.cmd('surface 1 size auto factor 5')
+        ## Fabrication de groupe et de nodeset
+        for i,s in enumerate(cubit.get_entities("surface")):
+            S = cubit.surface(s)
+            cubit.cmd('block ' + str(i+1) + ' surface ' + S.entity_name())
+            cubit.cmd('block ' + str(i+1) + ' name "' + S.entity_name() + ' "' )
+        gcl.create_group_nodeset_desc(['Astheno_Litho_Contact','Contact_OP_DP','Contact_Prism_DP'],"fault_top",20)     
+        gcl.create_group_nodeset_desc(['Top_Litho_OP','Top_Prism','Top_Litho_DP'],"ground_surface",20)     
+        gcl.create_group_nodeset_desc(['Bottom_Litho_OP'],"bottom_litho_OP",20)     
+        gcl.create_group_nodeset_desc(['Bottom_Litho_DP'],"bottom_litho_DP",20)     
+        gcl.create_group_nodeset_desc(['Edge_Litho_OP'],"edge_litho_OP",20) 
+        gcl.create_group_nodeset_desc(['Edge_Litho_DP'],"edge_litho_DP",20)
+        gcl.create_group_nodeset_desc(['Front_Litho_DP'],"front_litho_DP",20) 
+        gcl.create_group_nodeset_desc(['Contact_Prism_OP'],"contact_prism_OP",20,['fault_top'])
+        gcl.create_group_nodeset_desc(['Bottom_Astheno_DP','Bottom_Astheno_OP'],"bottom_astheno",20,['front_litho_DP']) 
+        gcl.create_group_nodeset_desc(['Edge_Astheno_DP'],"edge_astheno_DP",20,['edge_litho_DP']) 
+        gcl.create_group_nodeset_desc(['Edge_Astheno_OP'],"edge_astheno_OP",20,['edge_litho_OP'])
+        
+        # ecriture fichier final
+        cubit.cmd('export mesh "' + output_pathfile + '" dimension 2 overwrite')     
     return None
+ 
