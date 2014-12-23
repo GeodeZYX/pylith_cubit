@@ -1,0 +1,128 @@
+[Parameters]
+surface_nodeset_name=ground_surface
+total_time=100
+dt=3
+
+### INPUTS
+pylith_path    = /home/psakicki/THESE/CODES/pylith-2.0.3-linux-x86_64/
+exodus_name    = /home/psakicki/THESE/MODEL_GWADA/PYTHON_FUNCTIONS/mesh_exemple/mesh__solo1.exo
+# NB : exodus_name can be an exodus file or a folder; in this case, all *exo files will be treated (NOT IMPLEMENTED)
+local_generic  = /home/psakicki/THESE/MODEL_GWADA/PYTHON_FUNCTIONS/generic_pylith_config/interseismic.cfg
+main_generic   = /home/psakicki/THESE/MODEL_GWADA/PYTHON_FUNCTIONS/generic_pylith_config/pylithapp.cfg
+inp_dist_units = km
+
+### OUTPUTS
+output_path       = /home/psakicki/THESE/MODEL_GWADA/WORKING_DIR/experience_mk10
+output_dir_prefix = exp
+output_h5_name    = step02
+output_main       = pylithapp.cfg
+output_local      = interseismic.cfg
+out_dist_units    = m
+
+erase_existing = False
+
+
+# =============================== BLOCKS PARAMETERS ===============================
+# defing a interval : 
+# [minval , maxval , delta] (delta is the last)
+
+# ---------- Litho_OP ----------
+[Litho_OP.general]
+type=block
+type_material=elastic
+
+[Litho_OP.parameters]
+density = 3300.0
+vs = 4500.0
+vp = 8000.0
+
+# ---------- Litho_DP ----------
+[Litho_DP.general]
+type = block
+type_material=elastic
+
+[Litho_DP.parameters]
+density = 3300.0
+vs = 4500.0
+vp = 8000.0
+
+# ---------- Astheno_OP ----------
+[Astheno_OP.general]
+type = block
+type_material=maxwell
+
+[Astheno_OP.parameters]
+density = 3360.0 
+vs = 4518.0
+vp = 8300.0
+viscosity = 1.0e+20
+
+# ---------- Astheno_DP ----------
+[Astheno_DP.general]
+type = block
+type_material=maxwell
+
+[Astheno_DP.parameters]
+density = 3360.0 
+vs = 4518.0
+vp = 8300.0
+viscosity = 1.0e+20
+
+
+# ---------- Prisme (Prism is a reserved word in cubit) ----------
+[Prisme.general]
+type = block
+type_material=elastic
+
+[Prisme.parameters]
+density = 3300.0
+vs = 4500.0
+vp = 8000.0
+
+# =============================== NODESETS PARAMETERS ===============================
+### Set Interfaces Nodesets
+[fault_top.general]
+type = interface
+spatialdb = file
+locked = True
+maxi_locked_depth  = -50
+mini_locked_length = 10
+mini_locked_step = 10
+
+[fault_top.parameters]
+left-lateral-slip  = [-5 , -1 , 1]
+fault-opening = 0
+
+[bottom_litho_DP.general]
+type=interface
+spatialdb=file
+
+[bottom_litho_DP.parameters]
+left-lateral-slip =      fault_top
+fault-opening =      fault_top
+
+[contact_prism_OP.general]
+type=interface
+spatialdb=file
+
+[contact_prism_OP.parameters]
+left-lateral-slip  = 0
+fault-opening = 0
+
+### Set Boundary Nodesets
+
+[edge_litho_OP.general]
+type=bc
+bc_dof=[0]
+
+[edge_astheno_OP.general]
+type=bc
+bc_dof=[0]
+
+[bottom_astheno.general]
+type=bc
+bc_dof=[1]
+
+[edge_astheno_DP.general]
+type=bc
+bc_dof=[0]

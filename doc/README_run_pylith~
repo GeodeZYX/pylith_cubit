@@ -1,0 +1,80 @@
+
+The goal of run_pylith is to process a bunch of pylith run, with variation of some parameters
+
+### OPERATIONNAL PROCEDURE
+
+# Step 1 : generating the pylith configfiles / spatialdb files for each combination
+
+A configfile (usually named run_pylith.cfg) define variables and fixed parameters for entities
+of an EXODUS file generated with CUBIT
+
+an ENTITY is a bloc / interface / bc (boundary condition)
+
+range of variable parameters can be diefined with a list [minval , maxval , delta]
+
+output_path
+\_ output_dir_prefix_1
+                     \_ output
+                             \_<ENTITIES>.h5 (step2)
+                             \_<ENTITIES>.xmf (step2)
+                             \_output_h5_name.h5 (step2)
+                             \_output_h5_name.xmf (step2)
+                     \_ <ENTITIES>.spatialdb (step1)
+                     \_ output_local (step1)
+                     \_ output_main (step1)
+                     \_ err.log (step2)
+                     \_ std.log (step2)
+\_ output_dir_prefix_2
+...
+\_ output_dir_prefix_n
+\_ err_summary.log
+
+# Step 
+
+
+
+### INTERNAL STRUCTURE
+
+Data comming from a config file transit across 3 kind of dico :
+
+1) a combi dico contains all information about ONE combinaition,
+       the keys are like in the configfile '<name of the block/interface>.<name of the parameter>
+
+ the discrimination of specific cases is in the configdic2valdic
+
+2) a val dico have n keys ('x','y','density'...) + a entity_name key + entity_type key:
+        param1 : [val1,val2 ...]
+        param2 : [val1,val2 ...]
+        ....
+        paramn : [val1,val2 ...]
+         +++       
+        entity_name : the name of the entity (thank you captain obvious)
+        (all the annex keys must be removed in valdic2sdbdic_list)
+
+        ONE block/interface per dico => a list of valdico for one combination
+        SEVERALS value type per dico
+  exemple :
+    x : [ .... ]
+    viscosity : [ .... ]
+    vp : [ .... ]
+    entity_name : Astheno_OP
+   
+
+3) A sdb dico have 3 keys : 
+        'name' : STRING, ex  :'x' 'y' 'z' 'density' ...
+        'unit' : STRING, ex : 'kg/m**3'  'm/s'  'm/s' ... 
+        'values' : LIST of the values     
+  
+        ONE value type per dico (but severals values in the values list) => a list for one entity
+
+
+
+
+
+
+
+
+
+
+
+
