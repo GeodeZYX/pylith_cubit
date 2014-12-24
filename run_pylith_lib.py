@@ -692,10 +692,12 @@ def main_run_pylith_multi(configfile):
     dirlist = natural_sort([ d for d in os.listdir(maindir) if d.startswith(outdirprefix) ])
     cfwildcard = output_local
     
-    errbig_file = open( maindir + "/err_summary.log", "w")
+    errbig_file_path = maindir + "/err_summary.log"
+    if os.path.isfile(errbig_file_path):
+		os.remove(errbig_file_path)
     err_iter_list = []
     process_args_list = []
-    pool = multiprocessing.Pool(processes=4)
+    pool = multiprocessing.Pool(processes=8)
 
     for d in dirlist:
         curdir = maindir + '/' + d
@@ -703,7 +705,7 @@ def main_run_pylith_multi(configfile):
         if not os.path.exists('output'):
             os.makedirs('output')
         for cf in sorted(glob.glob(cfwildcard)):
-            args = [cf,curdir,output_h5_name,pylith_path,dic_env,erase_existing]
+            args = [cf,curdir,output_h5_name,pylith_path,dic_env,erase_existing,errbig_file_path]
             process_args_list.append(args)
 
 
@@ -714,9 +716,11 @@ def main_run_pylith_multi(configfile):
     results = pool.map(process_unit,process_args_list)
     results = sorted(results)
     
-    for f,std,err in results:
-        if err != '':
-            errbig_file('error log not empty for : '+ f +'\n')
+    errbig_file = open( errbig_file_path , "a")
+    
+#for f,std,err in results:
+#if err != '':
+#errbig_file.write('error log not empty for : '+ f +'\n')
 
     errbig_file.write('total exec. time : ' + str(time.time() - start_pool))
             
@@ -751,13 +755,13 @@ def main_run_pylith_multi(configfile):
     return None
     
 def process_unit(ain):
-    cf,curdir,output_h5_name,pylith_path,dic_env,erase_existing = ain
+    cf,curdir,output_h5_name,pylith_path,dic_env,erase_existing,errbig_file_path = ain
     print '---------------- START ------------------'
     os.chdir(curdir)
     print "running : " + cf + ' in ' + curdir
     if os.path.isfile( curdir + '/output/' + output_h5_name + '.h5') and not erase_existing:
         print './output/' + output_h5_name + '.h5 exists , skiping ...'
-        return output_h5_name ,'',''
+        return curdir ,'',''
     print ''
     start = time.time()
     p = subprocess.Popen('',executable='/bin/bash', stdin=subprocess.PIPE , stdout=subprocess.PIPE , stderr=subprocess.PIPE ,env=dic_env)
@@ -774,8 +778,11 @@ def process_unit(ain):
     if stderr != '':
         print "err.log is not empty, must be checked !" 
         print stderr
+        errbig_file = open(errbig_file_path,'a')
+        errbig_file.write('error log not empty for : '+ curdir +'\n')
+        errbig_file.close()        
     print ''
-    return output_h5_name , stdout , stderr
+    return curdir , stdout , stderr
     
 
 #                _ _                          __ _        __ _ _           
