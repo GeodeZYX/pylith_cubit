@@ -343,10 +343,10 @@ def configfile2combidic_list(path,exodusin):
                     truemin = min(val[0:2])
                     truemax = max(val[0:2])
                     delta = val[2]
-                    paramdic[e + '.' +  param] = list(np.arange(truemin,truemax,delta))           
+                    paramdic[e + '.' +  param] = list(np.arange(truemin,truemax+1,delta))           
                     if cf.has_option(e + '.general','spacing_mode'):  # try for the special case of a exponetial progression
                         if cf.get(e + '.general','spacing_mode') == 'exp':
-                            paramdic[e + '.' +  param] = [ eval('1e+' + str(x)) for x in list(np.arange(truemin,truemax,delta))]           
+                            paramdic[e + '.' +  param] = [ eval('1e+' + str(x)) for x in list(np.arange(truemin,truemax+1,delta))]           
                 elif type(val) is str:
                     if val.strip()[0] == '-': # using a minus at the beginning of the string as marker for sign inversion
                         val2 = val.strip()[1:].replace(' ','')
